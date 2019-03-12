@@ -19,6 +19,6 @@ before_build:
   - nuget restore
 
 after_build:
-  - nuget pack EFCacheContains/EFCacheContains.csproj -Version {version} -OutputDirectory Artifacts
-  - appveyor PushArtifact EFCacheContains/Artifacts/EFCacheContains-{version}.nupkg
+  - nuget pack EFCacheContains/EFCacheContains.csproj -Version %appveyor_build_version% -OutputDirectory Artifacts
+  - appveyor PushArtifact EFCacheContains/Artifacts/EFCacheContains-%appveyor_build_version%.nupkg
 
