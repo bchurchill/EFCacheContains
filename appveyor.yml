@@ -4,3 +4,7 @@ image: Visual Studio 2017
 before_build:
   - nuget restore
 
+platform:
+  - x86
+  - x64
+
