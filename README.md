@@ -20,7 +20,14 @@ var myQuery = from r in myContext.Records.CacheContains()
               select r;
 ```
 
+Typically, `myQuery` will reference an expression tree that has a call to `Contains` in it.  But, so long as `myList` contains 5 elements or fewer, the call to `CacheContains()` will rewrite the expression tree as a cascade of boolean checks.  To change the cutoff size from 5 to another value, pass it as a parameter to `CacheContains`:
 
+...
+
+var myQuery = from r in myContext.Records.CacheContains(10)
+              where myList.Contains(r.Id)
+              select r;
+```
 
 
 

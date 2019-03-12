@@ -9,9 +9,9 @@ namespace berkeleychurchill.CacheContains
 {
     public static class QueryableExtensions
     {
-        public static IQueryable<T> CacheContains<T>(this IQueryable<T> q)
+        public static IQueryable<T> CacheContains<T>(this IQueryable<T> q, int maxSize = 5)
         {
-            return new CacheContainsWrapper<T>(q);
+            return new CacheContainsWrapper<T>(q, maxSize);
         }
 
         public class DummyWrapper<T>
@@ -94,11 +94,11 @@ namespace berkeleychurchill.CacheContains
                 if(count == 0)
                 {
                     return Expression.Constant(false);
-                } else if(count == 1)
+                } else if(count == 1 && 1 <= elementsToCache)
                 {
                     var value = ourElementAt.Invoke(null, new object[] { enumerable, 0 });
                     return Expression.MakeBinary(ExpressionType.Equal, argument, Wrap(value));
-                } else if(count < elementsToCache)
+                } else if(count <= elementsToCache)
                 {
                     var firstValue = ourElementAt.Invoke(null, new object[] { enumerable, 0 });
                     var firstExpr = Expression.MakeBinary(ExpressionType.Equal, argument, Wrap(firstValue));
@@ -144,9 +144,13 @@ namespace berkeleychurchill.CacheContains
         {
             IQueryable<T> parent;
             static CacheContainsVisitor visitor;
+            private readonly int elementsToCache_;
 
-            public CacheContainsWrapper(IQueryable<T> queryable, int elementsToCache = 5)
+            public CacheContainsWrapper(IQueryable<T> queryable, int elementsToCache)
             {
+                if (elementsToCache < 0)
+                    throw new ArgumentOutOfRangeException("elementsToCache", "The value of 'elementsToCache' must be non-negative.");
+                elementsToCache_ = elementsToCache;
                 visitor = new CacheContainsVisitor(elementsToCache);
                 parent = queryable;
             }
@@ -164,7 +168,8 @@ namespace berkeleychurchill.CacheContains
             public IQueryable<U> CreateQuery<U>(Expression e)
             {
                 var transformed = visitor.Visit(e);
-                return new CacheContainsWrapper<U>(parent.Provider.CreateQuery<U>(transformed));
+                return new CacheContainsWrapper<U>(parent.Provider.CreateQuery<U>(transformed),
+                                                    elementsToCache_);
             }
 
             public U Execute<U>(Expression e)
