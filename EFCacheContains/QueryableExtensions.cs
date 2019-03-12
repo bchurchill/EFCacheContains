@@ -30,7 +30,7 @@ namespace berkeleychurchill.CacheContains
         {
             MethodInfo elementAtMethod;
             MethodInfo countMethod;
-            private int elementsToCache;
+            private readonly int elementsToCache;
 
             internal CacheContainsVisitor(int toCache)
             {
@@ -53,7 +53,7 @@ namespace berkeleychurchill.CacheContains
             }
 
             /** Take an object and wrap it so that EF parameterizes it. */
-            private Expression wrap(object obj)
+            private Expression Wrap(object obj)
             {
                 var genericType = obj.GetType();
                 var dummyWrapperType = typeof(DummyWrapper<>).MakeGenericType(new Type[] { genericType });
@@ -64,7 +64,7 @@ namespace berkeleychurchill.CacheContains
             }
 
             /** Rewrite an invocation of Contains() as something nice. */
-            private Expression rewrite(Expression target, MethodInfo method, Expression argument)
+            private Expression Rewrite(Expression target, MethodInfo method, Expression argument)
             {
                 /** Specialize methods for the type at hand */
                 if (target.Type.GetGenericArguments().Length == 0)  // I don't really understand this case -- improvements possible?
@@ -97,17 +97,17 @@ namespace berkeleychurchill.CacheContains
                 } else if(count == 1)
                 {
                     var value = ourElementAt.Invoke(null, new object[] { enumerable, 0 });
-                    return Expression.MakeBinary(ExpressionType.Equal, argument, wrap(value));
+                    return Expression.MakeBinary(ExpressionType.Equal, argument, Wrap(value));
                 } else if(count < elementsToCache)
                 {
                     var firstValue = ourElementAt.Invoke(null, new object[] { enumerable, 0 });
-                    var firstExpr = Expression.MakeBinary(ExpressionType.Equal, argument, wrap(firstValue));
+                    var firstExpr = Expression.MakeBinary(ExpressionType.Equal, argument, Wrap(firstValue));
                     var output = firstExpr;
 
                     for(int i = 1; i < count; ++i)
                     {
                         var nextValue = ourElementAt.Invoke(null, new object[] { enumerable, i });
-                        var nextExpr = Expression.MakeBinary(ExpressionType.Equal, argument, wrap(nextValue));
+                        var nextExpr = Expression.MakeBinary(ExpressionType.Equal, argument, Wrap(nextValue));
                         output = Expression.MakeBinary(ExpressionType.Or, firstExpr, nextExpr);
                     }
 
@@ -131,7 +131,7 @@ namespace berkeleychurchill.CacheContains
                 {
                     var visitedTarget = Visit(target);
                     var visitedArguments = Visit(arguments);
-                    return rewrite(visitedTarget, method, visitedArguments[0]); 
+                    return Rewrite(visitedTarget, method, visitedArguments[0]); 
                 }
                 else
                 {
