@@ -8,8 +8,8 @@ configuration:
 before_build:
   - nuget restore
 
-build:
-  publish_nuget: true
+after_build:
+  - nuget pack EFCacheContains/EFCacheContains.csproj -OutputDirectory Artifacts
 
 deploy:
   provider: NuGet
