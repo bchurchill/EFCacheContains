@@ -10,10 +10,5 @@ before_build:
 
 after_build:
   - nuget pack EFCacheContains/EFCacheContains.csproj -OutputDirectory Artifacts
+  - appveyor PushArtifact EFCacheContains/Artifacts/*.nupkg
 
-deploy:
-  provider: NuGet
-  api_key:
-    secure: R4QT7lTZPElHMOwBUXmnztWpasHFi9cQd0fFMm/0iSmdd8wE+gj5y0tvHun2vpJp
-  skip_symbols: false
-  artifact: /.*\.nupkg/
