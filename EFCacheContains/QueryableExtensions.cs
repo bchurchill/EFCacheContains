@@ -1,48 +1,17 @@
-﻿using log4net;
-using SRP.Online.Domain.Common.Constant;
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace SRP.Online.Domain.Extensions
+namespace berkeleychurchill.CacheContains
 {
     public static class QueryableExtensions
     {
-        private static ILog serviceLogger = LogManager.GetLogger(Constants.LoggerName.ServiceLog);
-
         public static IQueryable<T> CacheContains<T>(this IQueryable<T> q)
         {
             return new CacheContainsWrapper<T>(q);
-        }
-
-        internal class PrintVisitor : ExpressionVisitor
-        {
-            string indent = "";
-
-            public PrintVisitor() { }
-
-            internal void reset()
-            {
-                indent = "";
-            }
-
-            public override Expression Visit(Expression e)
-            {
-                if (e != null)
-                {
-                    serviceLogger.Warn($"@@ {indent}at node NodeType={e.NodeType} Type={e.Type} expression={e}");
-
-                    indent = indent + "      ";
-                    Expression f = base.Visit(e);
-                    indent = indent.Substring(6);
-
-                    return f;
-                }
-                else
-                    return base.Visit(e);
-            }
         }
 
         public class DummyWrapper<T>
@@ -61,8 +30,6 @@ namespace SRP.Online.Domain.Extensions
         {
             MethodInfo elementAtMethod;
             MethodInfo countMethod;
-            //MethodInfo elementAtNonGeneric;
-            //MethodInfo countNonGeneric;
             private int elementsToCache;
 
             internal CacheContainsVisitor(int toCache)
@@ -82,18 +49,7 @@ namespace SRP.Online.Domain.Extensions
                         .Single(mi => mi.Name == "Count"
                          && mi.IsGenericMethodDefinition
                          && mi.GetParameters().Length == 1);
-                /*
-                elementAtNonGeneric = typeof(Enumerable)
-                        .GetMethods(BindingFlags.Static | BindingFlags.Public)
-                        .Single(mi => mi.Name == "ElementAt"
-                         && !mi.IsGenericMethodDefinition
-                         && mi.GetParameters().Length == 2);
 
-                countNonGeneric = typeof(Enumerable)
-                        .GetMethods(BindingFlags.Static | BindingFlags.Public)
-                        .Single(mi => mi.Name == "Count"
-                         && !mi.IsGenericMethodDefinition
-                         && mi.GetParameters().Length == 1); */
             }
 
             /** Take an object and wrap it so that EF parameterizes it. */
@@ -128,7 +84,6 @@ namespace SRP.Online.Domain.Extensions
                 }
                 else
                 {
-                    serviceLogger.Warn($"target.NodeType = {target.NodeType.ToString()}, target={target}");
                     LambdaExpression targetLambda = Expression.Lambda(target, new ParameterExpression[] { });
                     var targetThunk = targetLambda.Compile();
                     enumerable = targetThunk.DynamicInvoke();
@@ -189,7 +144,6 @@ namespace SRP.Online.Domain.Extensions
         {
             IQueryable<T> parent;
             static CacheContainsVisitor visitor;
-            static PrintVisitor printVisitor = new PrintVisitor();
 
             public CacheContainsWrapper(IQueryable<T> queryable, int elementsToCache = 5)
             {
@@ -209,11 +163,7 @@ namespace SRP.Online.Domain.Extensions
 
             public IQueryable<U> CreateQuery<U>(Expression e)
             {
-                //serviceLogger.Warn($"@@@@@@@@@@@@@@@@@@@@@ visiting {e}");
                 var transformed = visitor.Visit(e);
-                //printVisitor.reset();
-                //printVisitor.Visit(transformed);
-
                 return new CacheContainsWrapper<U>(parent.Provider.CreateQuery<U>(transformed));
             }
 
