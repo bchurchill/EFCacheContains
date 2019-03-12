@@ -4,6 +4,8 @@ image: Visual Studio 2017
 before_build:
   - nuget restore
 
+publish_nuget: true
+
 deploy:
   provider: NuGet
   api_key:
