@@ -1,5 +1,7 @@
 # EFCacheContains
 
+[![Build status](https://ci.appveyor.com/api/projects/status/d2aj00i8de4thr0e/branch/master?svg=true)](https://ci.appveyor.com/project/bchurchill/efcachecontains/branch/master)
+
 A library to help cache query plans using the 'Contains' method for Entity Framework
 
 # About
