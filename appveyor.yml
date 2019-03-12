@@ -1,6 +1,16 @@
 
 image: Visual Studio 2017
 
+version: '1.0.{build}'
+
+dotnet_csproj:
+  patch: true
+  file: '**\*.csproj'
+  package_version: '{version}'
+  assembly_version: '{version}'
+  file_version: '{version}'
+  informational_version: '{version}'
+
 configuration:
   - Debug
   - Release
@@ -9,6 +19,6 @@ before_build:
   - nuget restore
 
 after_build:
-  - nuget pack EFCacheContains/EFCacheContains.csproj -OutputDirectory Artifacts
-  - appveyor PushArtifact EFCacheContains/Artifacts/*.nupkg
+  - nuget pack EFCacheContains/EFCacheContains.csproj -Version {version} -OutputDirectory Artifacts
+  - appveyor PushArtifact EFCacheContains/Artifacts/EFCacheContains-{version}.nupkg
 

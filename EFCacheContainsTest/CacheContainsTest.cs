@@ -11,6 +11,11 @@ namespace berkeleychurchill.CacheContains.Test
         {
         }
 
+        /** TODO: It would be nice to test that this actually causes EF
+         * to cache things properly, but I think actually making a test 
+         * to do this reliably would be hard, since EF doesn't expose its
+         * internals visibly. */
+
         [Test]
         public void ContainsWorksShortList()
         {
