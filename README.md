@@ -13,7 +13,7 @@ Entity Framework translates queries written in Linq to SQL, and this is an expen
 This is distributed as a NuGet package on nuget.org:
 
 ```
-Install-Package EFCacheContains -Version 1.0.31-Release
+Install-Package EFCacheContains -Version 1.0.36-Release
 ```
 
 # Usage
