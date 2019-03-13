@@ -46,7 +46,25 @@ namespace berkeleychurchill.CacheContains.Test
         [Test]
         public void ListContainsWorksShortList([Range(0, 6)] int maxSize)
         {
-            InsersectStoreWithListTest(new List<int>() { 2, 4, 8 }, maxSize);
+            /** This test is different than the others, because it calls List.Contains(),
+             * not the IQueryable extension method (which is called regardless of the type parameters
+             * to IntersectStoreWithListTest) */
+            var list = new List<int>() { 3, 5, 7 };
+            var queryable = from i in storeList.AsQueryable().CacheContains(maxSize)
+                            where list.Contains(i)
+                            select i;
+
+            var result = queryable.ToList();
+            var expected = storeList.Intersect(list);
+            var expectedRewrites = maxSize < list.Count() ? 0 : 1;
+
+            Assert.AreEqual(expected, result);
+
+#if DEBUG
+            Assert.AreEqual(1, CacheContainsStatistics.ContainsCount);
+            Assert.AreEqual(0, CacheContainsStatistics.DynamicLambdaCount);
+            Assert.AreEqual(expectedRewrites, CacheContainsStatistics.RewriteCount);
+#endif
         }
 
         [Test]
