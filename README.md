@@ -37,5 +37,12 @@ var myQuery = from r in myContext.Records.CacheContains(10)
               select r;
 ```
 
+# Release Notes
 
+**1.0.31** 
+  * Important bug fix for lists containing more than 2 items.
+  * Performance improvements
+  * Additional testing.
+
+**1.0.26** Initial release.
 
