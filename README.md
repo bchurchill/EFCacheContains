@@ -19,7 +19,7 @@ Install-Package EFCacheContains -Version 1.0.31-Release
 # Usage
 
 ```
-using berkeleychurchill.CacheContains.QueryableExtensions;
+using berkeleychurchill.CacheContains;
 
 ...
 
