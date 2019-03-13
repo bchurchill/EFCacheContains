@@ -7,9 +7,13 @@ namespace berkeleychurchill.CacheContains.Test
 {
     public class Tests
     {
+        List<int> storeList;
+
         [SetUp]
         public void Setup()
         {
+            storeList = new List<int>() { 1, 2, 3, 4, 5, 6, 7 };
+            CacheContainsStatistics.Reset();
         }
 
         /** TODO: It would be nice to test that this actually causes EF
@@ -17,56 +21,54 @@ namespace berkeleychurchill.CacheContains.Test
          * to do this reliably would be hard, since EF doesn't expose its
          * internals visibly. */
 
-        [Test]
-        public void ContainsWorksShortList([Range(0,6)] int maxSize)
+        void InsersectStoreWithListTest<T> (
+            T list, 
+            int maxSize) 
+         where T:IEnumerable<int>
         {
-
-
-            IEnumerable<int> myList = new List<int>() { 2, 4, 8 };
-            IQueryable<int> myStore = (new List<int>() { 1, 2, 3, 4, 5, 6, 7 }).AsQueryable();
-            
-            var result = from i in myStore.CacheContains(maxSize)
-                         where myList.Contains(i)
+            var queryable = from i in storeList.AsQueryable().CacheContains(maxSize)
+                         where list.Contains(i)
                          select i;
 
-            var expected = new List<int>() { 2, 4 };
+            var result = queryable.ToList();
+            var expected = storeList.Intersect(list);
+            var expectedRewrites = maxSize < list.Count() ? 0 : 1;
 
-            Assert.AreEqual(expected, result.ToList());
+            Assert.AreEqual(expected, result);
+
+#if DEBUG
+            Assert.AreEqual(1, CacheContainsStatistics.ContainsCount);
+            Assert.AreEqual(0, CacheContainsStatistics.DynamicLambdaCount);
+            Assert.AreEqual(expectedRewrites, CacheContainsStatistics.RewriteCount);
+#endif
         }
 
         [Test]
-        public void ContainsWorksOneValue([Range(-10,10)] int value, 
+        public void ListContainsWorksShortList([Range(0, 6)] int maxSize)
+        {
+            InsersectStoreWithListTest(new List<int>() { 2, 4, 8 }, maxSize);
+        }
+
+        [Test]
+        public void IEnumerableContainsWorksShortList([Range(0,6)] int maxSize)
+        {
+            IEnumerable<int> myList = new List<int>() { 2, 4, 8 };
+            InsersectStoreWithListTest(myList, maxSize);
+        }
+
+        [Test]
+        public void ContainsWorksOneValue([Range(-2,10)] int value, 
                                           [Range(0, 6)] int maxSize)
         {
             IEnumerable<int> myList = new List<int>() { value };
-            var storeList = new List<int>() { 1, 2, 3, 4, 5, 6, 7 };
-            IQueryable<int> myStore = storeList.AsQueryable();
-
-            var result = from i in myStore.CacheContains(maxSize)
-                         where myList.Contains(i)
-                         select i;
-            
-            var expected = new List<int>();
-            if (storeList.Contains(value))
-                expected.Add(value);
-
-            Assert.AreEqual(expected, result.ToList());
+            InsersectStoreWithListTest(myList, maxSize);
         }
 
         [Test]
         public void ContainsWorksEmptyList([Range(0, 6)] int maxSize)
         {
             IEnumerable<int> myList = new List<int>() { };
-            var storeList = new List<int>() { 1, 2, 3, 4, 5, 6, 7 };
-            IQueryable<int> myStore = storeList.AsQueryable();
-
-            var result = from i in myStore.CacheContains(maxSize)
-                         where myList.Contains(i)
-                         select i;
-
-            var expected = new List<int>();
-
-            Assert.AreEqual(expected, result.ToList());
+            InsersectStoreWithListTest(myList, maxSize);
         }
     }
 }

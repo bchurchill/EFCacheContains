@@ -19,7 +19,7 @@ namespace berkeleychurchill.CacheContains
         internal class CacheContainsWrapper<T> : IQueryable<T>, IQueryProvider, IOrderedQueryable<T>
         {
             IQueryable<T> parent;
-            static CacheContainsVisitor visitor;
+            static ContainsRewriteVisitor visitor;
             private readonly int elementsToCache_;
 
             public CacheContainsWrapper(IQueryable<T> queryable, int elementsToCache)
@@ -27,7 +27,7 @@ namespace berkeleychurchill.CacheContains
                 if (elementsToCache < 0)
                     throw new ArgumentOutOfRangeException("elementsToCache", "The value of 'elementsToCache' must be non-negative.");
                 elementsToCache_ = elementsToCache;
-                visitor = new CacheContainsVisitor(elementsToCache);
+                visitor = new ContainsRewriteVisitor(elementsToCache);
                 parent = queryable;
             }
 

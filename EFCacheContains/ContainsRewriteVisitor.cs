@@ -8,13 +8,13 @@ using System.Text;
 namespace berkeleychurchill.CacheContains
 {
     
-    internal class CacheContainsVisitor : ExpressionVisitor
+    internal class ContainsRewriteVisitor : ExpressionVisitor
     {
         MethodInfo elementAtMethod;
         MethodInfo countMethod;
         private readonly int elementsToCache;
 
-        internal CacheContainsVisitor(int toCache)
+        internal ContainsRewriteVisitor(int toCache)
         {
             elementsToCache = toCache;
 
@@ -45,6 +45,54 @@ namespace berkeleychurchill.CacheContains
             return Expression.Field(Expression.Constant(dummyWrapper), fieldInfo);
         }
 
+        /** This is meant to be a faster way of evaluating an expression than compiling a new lambda
+         * every single time.  The reality is that we only need to evaluate really small expresison trees,
+         * and most of them are very simple. */
+        private object EvaluateExpression(Expression e)
+        {
+            switch(e.NodeType)
+            {
+                case ExpressionType.Constant:
+                    return ((ConstantExpression)e).Value;
+
+                case ExpressionType.Convert:
+                    var target = ((UnaryExpression)e).Operand;
+                    return EvaluateExpression(target);
+
+                case ExpressionType.MemberAccess:
+                    var memberExpr = (MemberExpression)e;
+                    var valueForInvocation = EvaluateExpression(memberExpr.Expression);
+                    if (memberExpr.Member.MemberType == MemberTypes.Property)
+                    {
+                        var propertyInfo = (PropertyInfo)memberExpr.Member;
+                        return propertyInfo.GetValue(valueForInvocation);
+                    }
+                    else if (memberExpr.Member.MemberType == MemberTypes.Field)
+                    {
+                        var fieldInfo = (FieldInfo)memberExpr.Member;
+                        return fieldInfo.GetValue(valueForInvocation);
+                    } else
+                    {
+                        return EvaluateExpressionSlow(e);
+                    }
+
+                default:
+                    return EvaluateExpressionSlow(e);
+            }
+
+        }
+
+        private object EvaluateExpressionSlow(Expression e)
+        {
+#if DEBUG
+            Console.WriteLine($"[CacheContains - Rewrite] Dynamically invoking lambda.  NodeType = {e.NodeType.ToString()} node={e}");
+            CacheContainsStatistics.DynamicLambdaCount++;
+#endif
+            LambdaExpression targetLambda = Expression.Lambda(e, new ParameterExpression[] { });
+            var targetThunk = targetLambda.Compile();
+            return targetThunk.DynamicInvoke();
+        }
+
         /** Rewrite an invocation of Contains() as something nice. */
         private Expression Rewrite(Expression target, MethodInfo method, Expression argument)
         {
@@ -58,61 +106,29 @@ namespace berkeleychurchill.CacheContains
                 return null;
             }
 
+            /** Get the IEnumerable object and its methods. */
             Type genericArgument = target.Type.GetGenericArguments()[0];
             MethodInfo ourCount = countMethod.MakeGenericMethod(genericArgument);
             MethodInfo ourElementAt = elementAtMethod.MakeGenericMethod(genericArgument);
+            object enumerable = EvaluateExpression(target);
 
-
-            /** Get the IEnumerable object */
-            object enumerable = null;
-            if (target.NodeType == ExpressionType.Constant)
-            {
-                ConstantExpression expr = (ConstantExpression)(target);
-                enumerable = expr.Value;
-            }
-            else if (target.NodeType == ExpressionType.MemberAccess)
-            {
-                MemberExpression expr = (MemberExpression)(target);
-                if (expr.Expression.NodeType == ExpressionType.Constant)
-                {
-                    var valueForInvocation = ((ConstantExpression)expr.Expression).Value;
-                    if (expr.Member.MemberType == MemberTypes.Property)
-                    {
-                        var propertyInfo = (PropertyInfo)expr.Member;
-                        enumerable = propertyInfo.GetValue(valueForInvocation);
-                    }
-                    else if (expr.Member.MemberType == MemberTypes.Field)
-                    {
-                        var fieldInfo = (FieldInfo)expr.Member;
-                        enumerable = fieldInfo.GetValue(valueForInvocation);
-                    }
-                }
-            }
-
-            if (enumerable == null)
-            {
-                LambdaExpression targetLambda = Expression.Lambda(target, new ParameterExpression[] { });
-                var targetThunk = targetLambda.Compile();
-                enumerable = targetThunk.DynamicInvoke();
-#if DEBUG
-                Console.WriteLine($"[CacheContains - Rewrite] Dynamically invoking lambda.  target.NodeType = {target.NodeType.ToString()} target={target}");
-                CacheContainsStatistics.DynamicLambdaCount++;
-#endif
-            }
-
+            /** Count the number of items. */
             int count = (int)ourCount.Invoke(null, new object[] { enumerable });
 
             if (count == 0)
             {
+                /** In this case, the method call will always return false. */
                 return Expression.Constant(false);
             }
             else if (count == 1 && 1 <= elementsToCache)
             {
+                /** If there's only one item in the list, we replace the call with an equality check. */
                 var value = ourElementAt.Invoke(null, new object[] { enumerable, 0 });
                 return Expression.MakeBinary(ExpressionType.Equal, argument, Wrap(value));
             }
             else if (count <= elementsToCache)
             {
+                /** If there are multiple itmes in the list, we chain logical-ORs. */
                 var firstValue = ourElementAt.Invoke(null, new object[] { enumerable, 0 });
                 var firstExpr = Expression.MakeBinary(ExpressionType.Equal, argument, Wrap(firstValue));
                 var output = firstExpr;
