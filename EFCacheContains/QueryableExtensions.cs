@@ -10,12 +10,18 @@ namespace berkeleychurchill.CacheContains
 {
     public static class QueryableExtensions
     {
+        public static int DefaultMaxSize = 5;
 
-        public static IQueryable<T> CacheContains<T>(this IQueryable<T> q, int maxSize = 5)
+        public static IQueryable<T> CacheContains<T>(this IQueryable<T> q, int maxSize)
         {
             return new CacheContainsWrapper<T>(q, maxSize);
         }
-        
+
+        public static IQueryable<T> CacheContains<T>(this IQueryable<T> q)
+        {
+            return new CacheContainsWrapper<T>(q, DefaultMaxSize);
+        }
+
         internal class CacheContainsWrapper<T> : IQueryable<T>, IQueryProvider, IOrderedQueryable<T>
         {
             IQueryable<T> parent;

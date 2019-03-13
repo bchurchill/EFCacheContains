@@ -13,6 +13,7 @@ namespace berkeleychurchill.CacheContains.Test
         public void Setup()
         {
             storeList = new List<int>() { 1, 2, 3, 4, 5, 6, 7 };
+            QueryableExtensions.DefaultMaxSize = 5;
             CacheContainsStatistics.Reset();
         }
 
@@ -87,6 +88,52 @@ namespace berkeleychurchill.CacheContains.Test
         {
             IEnumerable<int> myList = new List<int>() { };
             InsersectStoreWithListTest(myList, maxSize);
+        }
+
+        [Test]
+        public void DefaultMaxSizeWorksWhenLarge()
+        {
+            QueryableExtensions.DefaultMaxSize = 15;
+            var list = new List<int>() { };
+            for (int i = 0; i < 20; i+=2)
+                list.Add(i);
+
+            var queryable = from i in storeList.AsQueryable().CacheContains()
+                            where list.Contains(i)
+                            select i;
+
+            var result = queryable.ToList();
+            var expected = storeList.Intersect(list);
+
+            Assert.AreEqual(expected, result);
+
+#if DEBUG
+            Assert.AreEqual(1, CacheContainsStatistics.ContainsCount);
+            Assert.AreEqual(0, CacheContainsStatistics.DynamicLambdaCount);
+            Assert.AreEqual(1, CacheContainsStatistics.RewriteCount);
+#endif
+        }
+
+        [Test]
+        public void DefaultMaxSizeWorksWhenSmall()
+        {
+            QueryableExtensions.DefaultMaxSize = 2;
+            var list = new List<int>() { 1, 3, 5, 7 };
+
+            var queryable = from i in storeList.AsQueryable().CacheContains()
+                            where list.Contains(i)
+                            select i;
+
+            var result = queryable.ToList();
+            var expected = storeList.Intersect(list);
+
+            Assert.AreEqual(expected, result);
+
+#if DEBUG
+            Assert.AreEqual(1, CacheContainsStatistics.ContainsCount);
+            Assert.AreEqual(0, CacheContainsStatistics.DynamicLambdaCount);
+            Assert.AreEqual(0, CacheContainsStatistics.RewriteCount);
+#endif
         }
     }
 }

@@ -37,5 +37,9 @@ var myQuery = from r in myContext.Records.CacheContains(10)
               select r;
 ```
 
+One can also change the default maximum list size to rewrite the expression tree:
 
+```
+CacheContains.QueryableExtensions.DefaultMaxSize = 20;
+```
 
