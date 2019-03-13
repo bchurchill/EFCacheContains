@@ -51,12 +51,17 @@ If you find a situation where this library is not rewriting a query that has a `
 
 # Release Notes
 
+**1.0.36**
+  * Fix for environments that do not allow optional parameters in expression trees.
+  * New way to set default maximum list size.
+
 **1.0.31** 
   * Important bug fix for lists containing more than 2 items.
   * Performance improvements
   * Additional testing.
 
-**1.0.26** Initial release.
+**1.0.26**
+  * Initial release.
 
 
 
