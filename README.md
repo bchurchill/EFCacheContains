@@ -13,13 +13,13 @@ Entity Framework translates queries written in Linq to SQL, and this is an expen
 This is distributed as a NuGet package on nuget.org:
 
 ```
-Install-Package EFCacheContains
+Install-Package EFCacheContains -Version 1.0.31-Release
 ```
 
 # Usage
 
 ```
-using berkeleychurchill.CacheContains.QueryableExtensions;
+using berkeleychurchill.CacheContains;
 
 ...
 
@@ -42,4 +42,13 @@ One can also change the default maximum list size to rewrite the expression tree
 ```
 CacheContains.QueryableExtensions.DefaultMaxSize = 20;
 ```
+
+# Release Notes
+
+**1.0.31** 
+  * Important bug fix for lists containing more than 2 items.
+  * Performance improvements
+  * Additional testing.
+
+**1.0.26** Initial release.
 
