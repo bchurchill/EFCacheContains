@@ -43,6 +43,12 @@ One can also change the default maximum list size to rewrite the expression tree
 CacheContains.QueryableExtensions.DefaultMaxSize = 20;
 ```
 
+# Troubleshooting
+
+It's very important that before you use this library you perform profiling to ensure that EF query plan caching is a bottleneck.  However, it's usually not enough to just rewrite your queries to invoke `CacheContains`.  There are a number of other reasons that EF might not cache your query.  The only way to be sure that things are working properly is to verify that you're obtaining the expected performance speedup.  It's good to profile again and compare to make sure there aren't any lingering queries which aren't being cached.  You may find it helpful to log the database queries and make sure that they're properly parameterized.
+
+If you find a situation where this library is not rewriting a query that has a `Contains` method call, please file a bug report.  A reproducible test case is very helpful (and it's even better if you can reproduce the problem with just Linq but no Entity Framework).
+
 # Release Notes
 
 **1.0.31** 
@@ -51,4 +57,7 @@ CacheContains.QueryableExtensions.DefaultMaxSize = 20;
   * Additional testing.
 
 **1.0.26** Initial release.
+
+
+
 
