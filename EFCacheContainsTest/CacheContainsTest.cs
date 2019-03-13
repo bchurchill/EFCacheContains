@@ -20,18 +20,18 @@ namespace berkeleychurchill.CacheContains.Test
         [Test]
         public void ContainsWorksShortList([Range(0,6)] int maxSize)
         {
-            Console.WriteLine("Hello, World!");
+
+
             IEnumerable<int> myList = new List<int>() { 2, 4, 8 };
             IQueryable<int> myStore = (new List<int>() { 1, 2, 3, 4, 5, 6, 7 }).AsQueryable();
-
-            var result2 = myStore.CacheContains(maxSize).Where(x => myList.Contains(x));
+            
             var result = from i in myStore.CacheContains(maxSize)
                          where myList.Contains(i)
                          select i;
 
             var expected = new List<int>() { 2, 4 };
 
-            Assert.AreEqual(expected, result2.ToList());
+            Assert.AreEqual(expected, result.ToList());
         }
 
         [Test]
