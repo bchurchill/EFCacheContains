@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -9,6 +10,12 @@ namespace berkeleychurchill.CacheContains
 {
     public static class QueryableExtensions
     {
+#if DEBUG
+        public static int ContainsCount { get; private set; }
+        public static int RewriteCount { get; private set; }
+        public static int DynamicLambdaCount { get; private set; }
+#endif
+
         public static IQueryable<T> CacheContains<T>(this IQueryable<T> q, int maxSize = 5)
         {
             return new CacheContainsWrapper<T>(q, maxSize);
@@ -66,9 +73,14 @@ namespace berkeleychurchill.CacheContains
             /** Rewrite an invocation of Contains() as something nice. */
             private Expression Rewrite(Expression target, MethodInfo method, Expression argument)
             {
+                Console.WriteLine("[Rewrite] called");
                 /** Specialize methods for the type at hand */
-                if (target.Type.GetGenericArguments().Length == 0)  // I don't really understand this case -- improvements possible?
-                    return Expression.Call(target, method, argument);
+                if (target.Type.GetGenericArguments().Length == 0)
+                {
+                    // I don't really understand this case -- improvements possible?
+                    Console.WriteLine("GetGenericArguments().Length == 0");
+                    return null;
+                }
                 
                 Type genericArgument = target.Type.GetGenericArguments()[0];
                 MethodInfo ourCount = countMethod.MakeGenericMethod(genericArgument);
@@ -79,14 +91,28 @@ namespace berkeleychurchill.CacheContains
                 object enumerable = null;
                 if (target.NodeType == ExpressionType.Constant)
                 {
+                    Console.WriteLine("Got nodetype constant :-)");
                     ConstantExpression expr = (ConstantExpression)(target);
                     enumerable = expr.Value;
                 }
-                else
+                else if(target.NodeType == ExpressionType.MemberAccess)
                 {
+                    MemberExpression expr = (MemberExpression)(target);
+                    Console.WriteLine($"MemberAccess expr={expr.Expression} type={expr.Expression.NodeType}");
+
                     LambdaExpression targetLambda = Expression.Lambda(target, new ParameterExpression[] { });
                     var targetThunk = targetLambda.Compile();
                     enumerable = targetThunk.DynamicInvoke();
+                }
+                else
+                {
+                    Console.WriteLine($"target.NodeType = {target.NodeType.ToString()} target={target}");
+                    LambdaExpression targetLambda = Expression.Lambda(target, new ParameterExpression[] { });
+                    var targetThunk = targetLambda.Compile();
+                    enumerable = targetThunk.DynamicInvoke();
+#if DEBUG
+                    DynamicLambdaCount = DynamicLambdaCount + 1;
+#endif
                 }
 
                 int count = (int)ourCount.Invoke(null, new object[] { enumerable });
@@ -108,16 +134,15 @@ namespace berkeleychurchill.CacheContains
                     {
                         var nextValue = ourElementAt.Invoke(null, new object[] { enumerable, i });
                         var nextExpr = Expression.MakeBinary(ExpressionType.Equal, argument, Wrap(nextValue));
-                        output = Expression.MakeBinary(ExpressionType.Or, firstExpr, nextExpr);
+                        output = Expression.MakeBinary(ExpressionType.Or, output, nextExpr);
                     }
 
                     return output;
                 } else
                 {
-                    return Expression.Call(target, method, argument);
+                    return null;
                 }
-
-                                                                                   // target.Contains(argument)
+                
             }
 
             
@@ -127,11 +152,44 @@ namespace berkeleychurchill.CacheContains
                 var method = e.Method;
                 var arguments = e.Arguments;
                 var target = e.Object;
+                Expression rewrite = null;
                 if (method.Name == "Contains" && arguments.Count() == 1 && target != null)
                 {
                     var visitedTarget = Visit(target);
                     var visitedArguments = Visit(arguments);
-                    return Rewrite(visitedTarget, method, visitedArguments[0]); 
+                    rewrite = Rewrite(visitedTarget, method, visitedArguments[0]);
+#if DEBUG
+                    Console.WriteLine("[VisitMethodCall] Found Contains() call");
+                    ContainsCount++;
+#endif
+                } else if (method.Name == "Contains" && arguments.Count() == 2 && target == null)
+                {
+                    Console.WriteLine("[VisitMethodCall] found 'Contains', extension style");
+                    var visitedArguments = Visit(arguments);
+                    rewrite = Rewrite(visitedArguments[0], method, visitedArguments[1]);
+#if DEBUG
+                    Console.WriteLine("[VisitMethodCall] Found Contains() extension method");
+                    ContainsCount++;
+#endif
+                }
+#if DEBUG
+                else if (method.Name == "Contains")
+                {
+                    Console.WriteLine("[VisitMethodCall] No 'Contains' method found.");
+                    ContainsCount++;
+                }
+#endif
+
+                Console.WriteLine("[VisitMethodCall] no 'Contains'");
+                Console.WriteLine($"method.Name={method.Name}, arguments.Count={arguments.Count()}, target={target?.ToString()}");
+
+                if (rewrite != null)
+                {
+#if DEBUG
+                    RewriteCount++;
+                    Console.WriteLine("[VisitMethodCall] Rewrite succeeded.");
+#endif
+                    return rewrite;
                 }
                 else
                 {
