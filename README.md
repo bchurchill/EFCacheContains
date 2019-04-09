@@ -51,6 +51,9 @@ If you find a situation where this library is not rewriting a query that has a `
 
 # Release Notes
 
+**1.0.40**
+  * Fixing CI so that packages aren't improperly marked as prereleases.
+  
 **1.0.36**
   * Fix for environments that do not allow optional parameters in expression trees.
   * New way to set default maximum list size.
