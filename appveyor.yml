@@ -12,7 +12,6 @@ dotnet_csproj:
   informational_version: '{version}'
 
 configuration:
-  - Debug
   - Release
 
 before_build:
@@ -20,5 +19,5 @@ before_build:
 
 after_build:
   - nuget pack EFCacheContains/EFCacheContains.csproj -Version %appveyor_build_version% -OutputDirectory Artifacts
-  - appveyor PushArtifact /Artifacts/EFCacheContains.%appveyor_build_version%-%CONFIGURATION%.nupkg
+  - appveyor PushArtifact /Artifacts/EFCacheContains.%appveyor_build_version%.nupkg
 
